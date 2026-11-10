@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Readiness Checker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Test page. Every custom class starts with "arc-" so it can move to the main site safely. */
+    .arc-hidden-field {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
+    .arc-score {
+      --p: 0;
+      --c: #6c757d;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: conic-gradient(var(--c) calc(var(--p) * 1%), #e9ecef 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: none;
+    }
+
+    .arc-score-inner {
+      width: 118px;
+      height: 118px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arc-score-num {
+      font-size: 2.3rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .arc-score-max {
+      font-size: .8rem;
+      color: #6c757d;
+    }
+
+    .arc-ps-card {
+      border: 1px solid #dee2e6;
+      border-radius: .5rem;
+      padding: .75rem;
+      text-align: center;
+      background: #fff;
+    }
+
+    .arc-ps-num {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+
+<body class="bg-light">
+  <main class="container py-5" style="max-width: 860px;">
+
+    <div class="text-center mb-4">
+      <h1 class="h2 fw-bold">AI Readiness Checker</h1>
+      <p class="text-muted mb-0">See how ready your website is for AI Overviews and AI answers.</p>
+    </div>
+
+    <!-- 1. FORM -->
+    <section id="formSection" class="card shadow-sm">
+      <div class="card-body p-4">
+        <form id="auditForm" novalidate>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label for="companyName" class="form-label">Company name</label>
+              <input type="text" class="form-control" id="companyName" name="companyName" required minlength="2"
+                maxlength="120" autocomplete="organization">
+              <div class="invalid-feedback">Please enter your company name.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="website" class="form-label">Website</label>
+              <input type="text" inputmode="url" class="form-control" id="website" name="website" required
+                maxlength="2048" placeholder="https://yourwebsite.com" autocomplete="url">
+              <div class="invalid-feedback">Please enter your website address.</div>
+            </div>
+            <div class="col-12">
+              <label for="productsServices" class="form-label">Key products and services</label>
+              <textarea class="form-control" id="productsServices" name="productsServices" rows="2" required
+                minlength="3" maxlength="500"
+                placeholder="For example: custom web apps, mobile apps, UI/UX design"></textarea>
+              <div class="invalid-feedback">Please describe what you offer.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="industry" class="form-label">Industry</label>
+              <input type="text" class="form-control" id="industry" name="industry" required minlength="2"
+                maxlength="100" placeholder="For example: Software development">
+              <div class="invalid-feedback">Please enter your industry.</div>
+            </div>
+            <div class="col-md-6">
+              <label for="location" class="form-label">Location</label>
+              <input type="text" class="form-control" id="location" name="location" required minlength="2"
+                maxlength="100" placeholder="City, Country">
+              <div class="invalid-feedback">Please enter your location.</div>
+            </div>
+            <div class="col-12">
+              <label for="email" class="form-label">Email (we send your report here)</label>
+              <input type="email" class="form-control" id="email" name="email" required maxlength="254"
+                autocomplete="email">
+              <div class="invalid-feedback">Please enter a valid email.</div>
+            </div>
+            <div class="col-12">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
+                <label class="form-check-label" for="consent">I agree to be contacted about my report.</label>
+                <div class="invalid-feedback">Please tick this box to continue.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Honeypot: real people never see or fill this. -->
+          <div class="arc-hidden-field" aria-hidden="true">
+            <label for="company_website_2">Leave this field empty</label>
+            <input type="text" id="company_website_2" name="company_website_2" tabindex="-1" autocomplete="off">
+          </div>
+
+          <div id="turnstileBox" class="mt-3"></div>
+          <div id="formError" class="alert alert-danger mt-3 d-none" role="alert"></div>
+
+          <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100 mt-4">Run Audit</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. PROGRESS -->
+    <section id="progressSection" class="card shadow-sm d-none">
+      <div class="card-body p-4 text-center">
+        <h2 class="h5 mb-3">Auditing <span id="progressCompany"></span></h2>
+        <div class="progress" style="height: 22px;" role="progressbar" aria-label="Audit progress" aria-valuemin="0"
+          aria-valuemax="100">
+          <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;">0%
+          </div>
+        </div>
+        <p id="progressStage" class="text-muted mt-3 mb-0" aria-live="polite">Starting</p>
+        <p class="small text-muted mt-2 mb-0">This usually takes 30 to 90 seconds. Please keep this page open.</p>
+      </div>
+    </section>
+
+    <!-- 3. RESULT -->
+    <section id="resultSection" class="d-none">
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <div class="d-flex flex-column flex-sm-row align-items-center gap-4">
+            <div id="resScore" class="arc-score">
+              <div class="arc-score-inner">
+                <span id="resScoreNum" class="arc-score-num">0</span>
+                <span class="arc-score-max">out of 100</span>
+              </div>
+            </div>
+            <div class="text-center text-sm-start">
+              <div class="text-muted small">AI Readiness Report</div>
+              <h2 id="resCompany" class="h4 mb-1"></h2>
+              <div id="resSite" class="text-muted mb-2"></div>
+              <span id="resGrade" class="badge fs-6"></span>
+              <div id="resPartial" class="small text-muted mt-2 d-none">Some checks could not be measured, so this score
+                is based on the checks that worked.</div>
+            </div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <a id="pdfBtn" class="btn btn-success" href="#" target="_blank" rel="noopener">Download PDF Report</a>
+            <button type="button" id="againBtn" class="btn btn-outline-secondary">Run another audit</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h3 class="h5 mb-3">Score by area</h3>
+          <div id="resCategories"></div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h3 class="h5 mb-3">Top issues to fix</h3>
+          <ul id="resIssues" class="list-group list-group-flush"></ul>
+          <p id="resNoIssues" class="text-muted mb-0 d-none">No major issues found.</p>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+          <h3 class="h5 mb-1">Questions your website does not answer yet</h3>
+          <p id="resQuestionsNote" class="text-muted small mb-3"></p>
+          <ul id="resQuestions" class="mb-0"></ul>
+        </div>
+      </div>
+
+      <div id="resSpeedCard" class="card shadow-sm mb-4 d-none">
+        <div class="card-body p-4">
+          <h3 class="h5 mb-3">Speed and quality (mobile)</h3>
+          <div id="resSpeed" class="row g-3"></div>
+        </div>
+      </div>
+
+      <p class="small text-muted text-center">
+        This score shows how ready your website is. It cannot promise a place in Google AI Overviews or any AI answer.
+      </p>
+    </section>
+
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ---- Settings -----------------------------------------------------------
+      const API_BASE = '';            // '' = same server. For the main website use 'https://api.yoursite.com'
+      const TURNSTILE_SITE_KEY = '';  // leave empty while testing locally
+      const POLL_MS = 2500;
+      const MAX_POLL_MS = 5 * 60 * 1000;
+
+      // ---- Small helpers ------------------------------------------------------
+      const $ = (id) => document.getElementById(id);
+
+      function mk(tag, cls, text) {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined && text !== null) e.textContent = String(text);
+        return e;
+      }
+      function show(id, on) { $(id).classList.toggle('d-none', !on); }
+      function showFormError(msg) {
+        const box = $('formError');
+        box.textContent = msg || '';
+        box.classList.toggle('d-none', !msg);
+      }
+      function userError(msg) { const e = new Error(msg); e.userMessage = true; return e; }
+
+      function friendlyError(status, data) {
+        if (status === 429) return 'Too many requests. Please wait a while and try again.';
+        if (status === 404) return 'We could not find this audit.';
+        if (data && typeof data.error === 'string' && data.error) return data.error;
+        if (data && typeof data.message === 'string' && data.message) return data.message;
+        return 'Something went wrong (code ' + status + '). Please try again.';
+      }
+
+      function readJson(res) {
+        return res.json().catch(() => ({})).then((data) => ({ res: res, data: data }));
+      }
+
+      // ---- Turnstile (optional CAPTCHA) ---------------------------------------
+      let turnstileId = null;
+      if (TURNSTILE_SITE_KEY) {
+        const s = document.createElement('script');
+        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        s.async = true;
+        s.onload = () => { turnstileId = window.turnstile.render('#turnstileBox', { sitekey: TURNSTILE_SITE_KEY }); };
+        document.head.appendChild(s);
+      }
+      function resetTurnstile() {
+        if (TURNSTILE_SITE_KEY && window.turnstile && turnstileId !== null) window.turnstile.reset(turnstileId);
+      }
+
+      // ---- Submit -------------------------------------------------------------
+      let currentId = null;
+      let startedAt = 0;
+      let failures = 0;
+      let pollTimer = null;
+
+      $('auditForm').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        showFormError('');
+        const form = ev.target;
+        if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
+
+        const payload = {
+          companyName: $('companyName').value.trim(),
+          website: $('website').value.trim(),
+          productsServices: $('productsServices').value.trim(),
+          industry: $('industry').value.trim(),
+          location: $('location').value.trim(),
+          email: $('email').value.trim(),
+          consent: $('consent').checked,
+          company_website_2: $('company_website_2').value
+        };
+
+        if (TURNSTILE_SITE_KEY) {
+          const token = window.turnstile && turnstileId !== null ? window.turnstile.getResponse(turnstileId) : '';
+          if (!token) { showFormError('Please complete the security check.'); return; }
+          payload.turnstileToken = token;
+        }
+
+        $('submitBtn').disabled = true;
+
+        fetch(API_BASE + '/api/audits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(readJson)
+          .then((r) => {
+            if (!r.res.ok) throw userError(friendlyError(r.res.status, r.data));
+            if (!r.data.auditId) throw userError('The server did not return an audit id.');
+            startProgress(r.data.auditId, payload.companyName);
+          })
+          .catch((err) => {
+            showFormError(err.userMessage ? err.message : 'Could not reach the server. Please try again.');
+            $('submitBtn').disabled = false;
+            resetTurnstile();
+          });
+      });
+
+      // ---- Progress and polling -----------------------------------------------
+      function setProgress(pct, stage) {
+        const p = Math.max(0, Math.min(100, Number(pct) || 0));
+        const bar = $('progressBar');
+        bar.style.width = p + '%';
+        bar.textContent = Math.round(p) + '%';
+        bar.parentElement.setAttribute('aria-valuenow', String(Math.round(p)));
+        $('progressStage').textContent = stage || 'Working';
+      }
+
+      function startProgress(id, company) {
+        currentId = id;
+        startedAt = Date.now();
+        failures = 0;
+        show('formSection', false);
+        show('resultSection', false);
+        show('progressSection', true);
+        $('progressCompany').textContent = company;
+        setProgress(0, 'Starting');
+        poll();
+      }
+
+      function fail(msg) {
+        clearTimeout(pollTimer);
+        show('progressSection', false);
+        show('formSection', true);
+        showFormError(msg);
+        $('submitBtn').disabled = false;
+        resetTurnstile();
+      }
+
+      function poll() {
+        fetch(API_BASE + '/api/audits/' + encodeURIComponent(currentId))
+          .then(readJson)
+          .then((r) => {
+            if (!r.res.ok) throw userError(friendlyError(r.res.status, r.data));
+            failures = 0;
+            const d = r.data;
+            setProgress(d.progress, d.stage);
+            if (d.status === 'done' && d.result) { renderResult(d); return; }
+            if (d.status === 'failed') { fail(d.error || 'The audit failed. Please try again.'); return; }
+            if (Date.now() - startedAt > MAX_POLL_MS) { fail('This is taking too long. Please try again later.'); return; }
+            pollTimer = setTimeout(poll, POLL_MS);
+          })
+          .catch((err) => {
+            failures += 1;
+            if (err.userMessage) { fail(err.message); return; }
+            if (failures >= 4) { fail('Lost connection to the server. Please try again.'); return; }
+            pollTimer = setTimeout(poll, POLL_MS);
+          });
+      }
+
+      // ---- Result -------------------------------------------------------------
+      const GRADE_COLOR = { 'Not Ready': '#dc3545', 'Basic': '#fd7e14', 'Good': '#0d6efd', 'Strong': '#198754' };
+      const GRADE_BADGE = { 'Not Ready': 'bg-danger', 'Basic': 'bg-warning text-dark', 'Good': 'bg-primary', 'Strong': 'bg-success' };
+      const SEVERITY_BADGE = { high: 'bg-danger', medium: 'bg-warning text-dark', low: 'bg-secondary' };
+
+      function renderResult(d) {
+        const r = d.result || {};
+        show('progressSection', false);
+        show('resultSection', true);
+
+        $('resCompany').textContent = d.companyName || '';
+        $('resSite').textContent = d.website || '';
+
+        const score = Math.max(0, Math.min(100, Number(r.overallScore) || 0));
+        const ring = $('resScore');
+        ring.style.setProperty('--p', String(score));
+        ring.style.setProperty('--c', GRADE_COLOR[r.grade] || '#6c757d');
+        $('resScoreNum').textContent = String(Math.round(score));
+
+        const grade = $('resGrade');
+        grade.textContent = r.grade || '';
+        grade.className = 'badge fs-6 ' + (GRADE_BADGE[r.grade] || 'bg-secondary');
+        show('resPartial', !!r.partial);
+
+        $('pdfBtn').href = API_BASE + '/api/audits/' + encodeURIComponent(currentId) + '/pdf';
+
+        renderCategories(r.categories);
+        renderIssues(r.issues);
+        renderQuestions(r.questions);
+        renderSpeed(r.pageSpeed);
+      }
+
+      function renderCategories(cats) {
+        const box = $('resCategories');
+        box.textContent = '';
+        (cats || []).forEach((c) => {
+          const max = Number(c.max) || 0;
+          const sc = Number(c.score) || 0;
+          const pct = max ? Math.round((sc / max) * 100) : 0;
+
+          const wrap = mk('div', 'mb-3');
+          const head = mk('div', 'd-flex justify-content-between mb-1');
+          head.appendChild(mk('span', 'fw-semibold', c.label));
+          head.appendChild(mk('span', 'text-muted', sc + ' / ' + max));
+          wrap.appendChild(head);
+
+          const prog = mk('div', 'progress');
+          prog.style.height = '10px';
+          const bar = mk('div', 'progress-bar ' + (pct >= 80 ? 'bg-success' : pct >= 50 ? 'bg-primary' : pct >= 30 ? 'bg-warning' : 'bg-danger'));
+          bar.style.width = pct + '%';
+          prog.appendChild(bar);
+          wrap.appendChild(prog);
+
+          if (Array.isArray(c.items) && c.items.length) {
+            const det = mk('details', 'mt-2');
+            det.appendChild(mk('summary', 'small text-muted', 'Show checks'));
+            const ul = mk('ul', 'small mb-0 mt-1');
+            c.items.forEach((it) => {
+              const val = it.score === null || it.score === undefined ? 'not measured' : it.score + ' / ' + it.max;
+              ul.appendChild(mk('li', null, it.label + ': ' + val + (it.note ? ' (' + it.note + ')' : '')));
+            });
+            det.appendChild(ul);
+            wrap.appendChild(det);
+          }
+          box.appendChild(wrap);
+        });
+      }
+
+      function renderIssues(issues) {
+        const ul = $('resIssues');
+        ul.textContent = '';
+        const list = Array.isArray(issues) ? issues : [];
+        show('resNoIssues', list.length === 0);
+        list.forEach((i) => {
+          const li = mk('li', 'list-group-item px-0');
+          const top = mk('div', 'd-flex align-items-center gap-2 mb-1');
+          const sev = String(i.severity || 'low').toLowerCase();
+          top.appendChild(mk('span', 'badge ' + (SEVERITY_BADGE[sev] || 'bg-secondary'), sev.toUpperCase()));
+          top.appendChild(mk('span', 'fw-semibold', i.title));
+          li.appendChild(top);
+          if (i.why) li.appendChild(mk('div', 'small text-muted', i.why));
+          if (i.fix) {
+            const fix = mk('div', 'small mt-1');
+            fix.appendChild(mk('strong', null, 'How to fix: '));
+            fix.appendChild(document.createTextNode(i.fix));
+            li.appendChild(fix);
+          }
+          if (i.page) li.appendChild(mk('div', 'small text-muted mt-1', 'Page: ' + i.page));
+          ul.appendChild(li);
+        });
+      }
+
+      function renderQuestions(questions) {
+        const list = Array.isArray(questions) ? questions : [];
+        const missing = list.filter((q) => !q.answered);
+        const ul = $('resQuestions');
+        ul.textContent = '';
+        $('resQuestionsNote').textContent = list.length
+          ? (list.length - missing.length) + ' of ' + list.length + ' customer questions are answered on your website.'
+          : 'Question check was not available for this audit.';
+        missing.forEach((q) => ul.appendChild(mk('li', 'mb-1', q.question)));
+      }
+
+      function renderSpeed(ps) {
+        const box = $('resSpeed');
+        box.textContent = '';
+        const ok = ps && !ps.error && typeof ps.performance === 'number';
+        show('resSpeedCard', !!ok);
+        if (!ok) return;
+        [['performance', 'Performance'], ['seo', 'SEO'], ['accessibility', 'Accessibility'], ['bestPractices', 'Best practices']].forEach((m) => {
+          const col = mk('div', 'col-6 col-md-3');
+          const card = mk('div', 'arc-ps-card');
+          const v = Number(ps[m[0]]);
+          const num = mk('div', 'arc-ps-num ' + (v >= 90 ? 'text-success' : v >= 50 ? 'text-warning' : 'text-danger'), Number.isFinite(v) ? Math.round(v) : '-');
+          card.appendChild(num);
+          card.appendChild(mk('div', 'small text-muted', m[1]));
+          col.appendChild(card);
+          box.appendChild(col);
+        });
+      }
+
+      // ---- Run another audit --------------------------------------------------
+      $('againBtn').addEventListener('click', () => {
+        clearTimeout(pollTimer);
+        $('auditForm').reset();
+        $('auditForm').classList.remove('was-validated');
+        showFormError('');
+        show('resultSection', false);
+        show('formSection', true);
+        $('submitBtn').disabled = false;
+        resetTurnstile();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })();
+  </script>
+</body>
+
+</html>
