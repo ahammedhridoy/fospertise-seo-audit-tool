@@ -4,6 +4,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const config = require('./src/config');
 const { connectDB } = require('./src/db');
+const Audit = require('./src/models/Audit');
+const auditRoutes = require('./src/routes/audits');
 
 const app = express();
 
@@ -14,7 +16,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://challenges.cloudflare.com'],
+        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://challenges.cloudflare.com'],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:'],
         fontSrc: ["'self'", 'https://cdn.jsdelivr.net'],
@@ -45,6 +47,8 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
 
+app.use('/api', auditRoutes);
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
@@ -67,6 +71,15 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await connectDB();
+
+    // Mark any orphaned queued/running audits as failed upon restart (SPEC §5)
+    await Audit.updateMany(
+      { status: { $in: ['queued', 'running'] } },
+      { status: 'failed', error: 'Server restarted', finishedAt: new Date() }
+    ).catch((err) => {
+      console.warn('Could not reset running audits on start:', err.message);
+    });
+
     const server = app.listen(config.PORT, () => {
       console.log(`Server listening on port ${config.PORT}`);
     });

@@ -1,5 +1,5 @@
 const cheerio = require('cheerio');
-const pLimit = require('p-limit').default;
+const pLimit = require('p-limit').default || require('p-limit');
 const { safeFetch } = require('./safeFetch');
 const { normalizeUrl } = require('./urlGuard');
 const config = require('../config');
@@ -349,6 +349,9 @@ async function crawlSite(startUrl, options = {}) {
     } catch {
       return;
     }
+
+    // Must be http or https
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
 
     // Must be same site
     if (normHost(parsed.hostname) !== siteHost) return;

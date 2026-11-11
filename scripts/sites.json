@@ -1,2 +1,7 @@
-[]
-
+[
+  "https://example.com",
+  "https://wordpress.org",
+  "https://react.dev",
+  "https://httpbin.org",
+  "https://news.ycombinator.com"
+]
