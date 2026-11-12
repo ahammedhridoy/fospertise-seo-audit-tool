@@ -8,6 +8,7 @@ const { normalizeUrl, assertPublicHost } = require('../services/urlGuard');
 const { verifyTurnstile } = require('../services/turnstile');
 const { queueAudit } = require('../jobs/runAudit');
 const { generatePdf, getCompanySlug } = require('../services/report');
+const { sendAuditReportEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -90,11 +91,12 @@ router.post('/audits', postAuditLimiter, async (req, res, next) => {
       });
     }
 
-    // 5. Caching check (§7.2): Look for a 'done' audit for the same domain within 24 hours
+    // 5. Caching check (§7.2): Look for a complete non-partial 'done' audit for the same domain within 24 hours
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const cachedAudit = await Audit.findOne({
       domain,
       status: 'done',
+      'result.partial': { $ne: true },
       createdAt: { $gte: twentyFourHoursAgo }
     }).sort({ createdAt: -1 });
 
@@ -122,6 +124,11 @@ router.post('/audits', postAuditLimiter, async (req, res, next) => {
 
       lead.auditId = newAudit._id;
       await lead.save();
+
+      // Send audit report email with PDF attached asynchronously
+      sendAuditReportEmail(newAudit, lead).catch((mailErr) => {
+        console.error(`Failed to send cached report email for audit ${newAudit._id}:`, mailErr.message);
+      });
 
       return res.status(200).json({
         auditId: newAudit._id.toString(),

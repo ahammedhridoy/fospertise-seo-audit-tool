@@ -213,73 +213,90 @@ function logError(attempt, maxRetries, err) {
 }
 
 /**
- * Helper to execute Gemini generation with exponential backoff on 429, 5xx, or invalid JSON.
+ * Helper to execute Gemini generation with exponential backoff on 429, 5xx, or invalid JSON,
+ * with fallback to alternative flash models if the primary model's daily quota is exhausted.
  */
 async function callGeminiWithRetry(contents, responseSchema, zodSchema, maxRetries = 3) {
-  let attempt = 0;
+  const models = [
+    config.GEMINI_MODEL || 'gemini-3.5-flash-lite',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-3.5-flash'
+  ].filter((m, idx, arr) => Boolean(m) && arr.indexOf(m) === idx);
+
   let lastError = null;
 
-  while (attempt < maxRetries) {
-    attempt++;
-    try {
-      const response = await ai.models.generateContent({
-        model: config.GEMINI_MODEL,
-        contents,
-        config: {
-          temperature: 0,
-          systemInstruction: SYSTEM_INSTRUCTION,
-          responseMimeType: 'application/json',
-          responseSchema,
-          httpOptions: {
-            timeout: REQUEST_TIMEOUT_MS,
-            // Retries are handled here so the attempt count stays predictable.
-            retryOptions: { attempts: 1 }
-          }
-        }
-      });
+  for (const currentModel of models) {
+    let attempt = 0;
 
-      const rawText = response.text;
-      if (!rawText) {
-        const emptyError = new Error('Empty response from Gemini');
-        emptyError.invalidJson = true;
-        throw emptyError;
-      }
-
-      let parsedJson;
+    while (attempt < maxRetries) {
+      attempt++;
       try {
-        parsedJson = JSON.parse(rawText);
-      } catch (jsonErr) {
-        const jsonError = new Error(`Invalid JSON from Gemini: ${jsonErr.message}`);
-        jsonError.invalidJson = true;
-        throw jsonError;
+        const response = await ai.models.generateContent({
+          model: currentModel,
+          contents,
+          config: {
+            temperature: 0,
+            systemInstruction: SYSTEM_INSTRUCTION,
+            responseMimeType: 'application/json',
+            responseSchema,
+            httpOptions: {
+              timeout: REQUEST_TIMEOUT_MS,
+              retryOptions: { attempts: 1 }
+            }
+          }
+        });
+
+        const rawText = response.text;
+        if (!rawText) {
+          const emptyError = new Error('Empty response from Gemini');
+          emptyError.invalidJson = true;
+          throw emptyError;
+        }
+
+        let parsedJson;
+        try {
+          parsedJson = JSON.parse(rawText);
+        } catch (jsonErr) {
+          const jsonError = new Error(`Invalid JSON from Gemini: ${jsonErr.message}`);
+          jsonError.invalidJson = true;
+          throw jsonError;
+        }
+
+        const checked = zodSchema.safeParse(parsedJson);
+        if (!checked.success) {
+          const shapeError = new Error('Gemini response did not match the expected shape');
+          shapeError.invalidJson = true;
+          throw shapeError;
+        }
+
+        return checked.data;
+      } catch (err) {
+        lastError = err;
+        const status = err.status || (err.error && err.error.code);
+        const dailyQuota = isDailyQuotaError(err);
+
+        logError(attempt, maxRetries, err);
+
+        // If daily quota is exceeded on this model, switch immediately to next model
+        if (dailyQuota) {
+          break;
+        }
+
+        const isRetryable =
+          (status >= 500 && status < 600) ||
+          (err.message && err.message.includes('Invalid JSON')) ||
+          (err.invalidJson === true);
+
+        if (attempt < maxRetries && isRetryable) {
+          const baseDelay = Math.min(10_000, Math.pow(2, attempt) * 1500);
+          const jitter = Math.floor(Math.random() * 1200);
+          const delayMs = baseDelay + jitter;
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          continue;
+        }
+        break;
       }
-
-      // Data in the wrong shape is treated like invalid JSON: it is worth another try.
-      const checked = zodSchema.safeParse(parsedJson);
-      if (!checked.success) {
-        const shapeError = new Error('Gemini response did not match the expected shape');
-        shapeError.invalidJson = true;
-        throw shapeError;
-      }
-
-      return checked.data;
-    } catch (err) {
-      lastError = err;
-      const status = err.status || (err.error && err.error.code);
-      const isRetryable =
-        (status === 429 && !isDailyQuotaError(err)) ||
-        (status >= 500 && status < 600) ||
-        (err.message && err.message.includes('Invalid JSON')) ||
-        (err.invalidJson === true);
-
-      logError(attempt, maxRetries, err);
-
-      if (attempt < maxRetries && isRetryable) {
-        const delayMs = Math.pow(2, attempt) * BACKOFF_BASE_MS;
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        continue;
-      }
-      break;
     }
   }
 

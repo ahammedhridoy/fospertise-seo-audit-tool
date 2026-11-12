@@ -10,7 +10,7 @@ const envSchema = z.object({
   NODE_ENV: z.preprocess(cleanString, z.enum(['development', 'production', 'test']).default('development')),
   MONGODB_URI: z.string({ required_error: 'MONGODB_URI is required' }).min(1, 'MONGODB_URI is required'),
   GEMINI_API_KEY: z.string({ required_error: 'GEMINI_API_KEY is required' }).min(1, 'GEMINI_API_KEY is required'),
-  GEMINI_MODEL: z.string({ required_error: 'GEMINI_MODEL is required' }).min(1, 'GEMINI_MODEL is required'),
+  GEMINI_MODEL: z.preprocess(cleanString, z.string().default('gemini-3.5-flash-lite')),
   PAGESPEED_API_KEY: z.string({ required_error: 'PAGESPEED_API_KEY is required' }).min(1, 'PAGESPEED_API_KEY is required'),
   ALLOWED_ORIGINS: z.string({ required_error: 'ALLOWED_ORIGINS is required' })
     .min(1, 'ALLOWED_ORIGINS is required')
@@ -19,7 +19,13 @@ const envSchema = z.object({
   TURNSTILE_SECRET: z.string().optional().default(''),
   REPORT_BRAND_NAME: z.string().optional().default(''),
   REPORT_BRAND_URL: z.string().optional().default(''),
-  REPORT_BRAND_EMAIL: z.string().optional().default('')
+  REPORT_BRAND_EMAIL: z.string().optional().default(''),
+  SMTP_HOST: z.string().optional().default('smtp.gmail.com'),
+  SMTP_PORT: z.preprocess(cleanString, z.coerce.number().int().positive().default(465)),
+  SMTP_SECURE: z.preprocess((val) => (val === 'false' || val === false ? false : true), z.boolean().default(true)),
+  SMTP_USER: z.string().optional().default(''),
+  SMTP_PASS: z.string().optional().default(''),
+  EMAIL_FROM: z.string().optional().default('')
 });
 
 const parsed = envSchema.safeParse(process.env);

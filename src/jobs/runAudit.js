@@ -11,6 +11,7 @@ const { checkStructure } = require('../services/checks/structure');
 const { checkTrust } = require('../services/checks/trust');
 const { judgeContent, buildQuestionCoverage } = require('../services/gemini');
 const { calculateScore } = require('../services/scoring');
+const { sendAuditReportEmail } = require('../services/email');
 
 const AUDIT_TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
 const auditQueue = pLimit(2); // Global concurrency limit: 2 audits at a time
@@ -159,13 +160,16 @@ async function runAuditPipeline({
         location,
         pages
       }).catch((err) => ({ error: err.message })),
-      buildQuestionCoverage({
-        companyName,
-        productsServices,
-        industry,
-        location,
-        pages
-      }).catch((err) => ({ error: err.message }))
+      // Stagger slightly (600ms) to avoid simultaneous network contention on Gemini API
+      new Promise((resolve) => setTimeout(resolve, 600)).then(() =>
+        buildQuestionCoverage({
+          companyName,
+          productsServices,
+          industry,
+          location,
+          pages
+        }).catch((err) => ({ error: err.message }))
+      )
     ]);
 
     contentResult = cRes;
@@ -277,6 +281,14 @@ async function executeAudit(auditId) {
       result: finalResult,
       error: null,
       finishedAt: new Date()
+    });
+
+    // Send audit report email with PDF attached (non-blocking)
+    sendAuditReportEmail(
+      { _id: auditId, domain: audit.domain, result: finalResult },
+      lead
+    ).catch((mailErr) => {
+      console.error(`Failed to send report email for audit ${auditId}:`, mailErr.message);
     });
   } catch (err) {
     if (timeoutId) clearTimeout(timeoutId);

@@ -102,6 +102,9 @@ async function getPageSpeed(url) {
       const errJson = await response.json();
       errorDetail = errJson.error?.message || errorDetail;
     } catch (_) {}
+    if (config.PAGESPEED_API_KEY && errorDetail.includes(config.PAGESPEED_API_KEY)) {
+      errorDetail = errorDetail.replace(new RegExp(config.PAGESPEED_API_KEY, 'g'), '[redacted]');
+    }
     return { error: errorDetail };
   }
 
