@@ -224,6 +224,7 @@
 
       // ---- Settings -----------------------------------------------------------
       const API_BASE = '';            // '' = same server. For the main website use 'https://api.yoursite.com'
+      const apiBaseUrl = API_BASE || (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
       const TURNSTILE_SITE_KEY = '';  // leave empty while testing locally
       const POLL_MS = 2500;
       const MAX_POLL_MS = 5 * 60 * 1000;
@@ -301,7 +302,7 @@
 
         $('submitBtn').disabled = true;
 
-        fetch(API_BASE + '/api/audits', {
+        fetch(apiBaseUrl + '/api/audits', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -351,7 +352,7 @@
       }
 
       function poll() {
-        fetch(API_BASE + '/api/audits/' + encodeURIComponent(currentId))
+        fetch(apiBaseUrl + '/api/audits/' + encodeURIComponent(currentId))
           .then(readJson)
           .then((r) => {
             if (!r.res.ok) throw userError(friendlyError(r.res.status, r.data));
@@ -395,7 +396,7 @@
         grade.className = 'badge fs-6 ' + (GRADE_BADGE[r.grade] || 'bg-secondary');
         show('resPartial', !!r.partial);
 
-        $('pdfBtn').href = API_BASE + '/api/audits/' + encodeURIComponent(currentId) + '/pdf';
+        $('pdfBtn').href = (apiBaseUrl || '') + '/api/audits/' + encodeURIComponent(currentId) + '/pdf';
 
         renderCategories(r.categories);
         renderIssues(r.issues);

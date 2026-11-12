@@ -4,7 +4,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const config = require('./src/config');
 const { connectDB } = require('./src/db');
-const Audit = require('./src/models/Audit');
 const auditRoutes = require('./src/routes/audits');
 
 const app = express();
@@ -31,6 +30,15 @@ const corsOptions = {
   origin: (origin, callback) => {
     if (!origin || config.ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true);
+    }
+    // In development, also permit localhost and 127.0.0.1 on any port
+    if (config.NODE_ENV === 'development') {
+      try {
+        const u = new URL(origin);
+        if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+          return callback(null, true);
+        }
+      } catch (_) {}
     }
     const error = new Error('Not allowed by CORS');
     error.status = 403;
@@ -71,17 +79,8 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await connectDB();
-
-    // Mark any orphaned queued/running audits as failed upon restart (SPEC §5)
-    await Audit.updateMany(
-      { status: { $in: ['queued', 'running'] } },
-      { status: 'failed', error: 'Server restarted', finishedAt: new Date() }
-    ).catch((err) => {
-      console.warn('Could not reset running audits on start:', err.message);
-    });
-
-    const server = app.listen(config.PORT, () => {
-      console.log(`Server listening on port ${config.PORT}`);
+    const server = app.listen(config.PORT, '0.0.0.0', () => {
+      console.log(`Server listening on port ${config.PORT} (http://localhost:${config.PORT} or http://127.0.0.1:${config.PORT})`);
     });
     return server;
   } catch (err) {
