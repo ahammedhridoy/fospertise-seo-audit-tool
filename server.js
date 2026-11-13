@@ -16,12 +16,21 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://challenges.cloudflare.com'],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          'https://cdn.jsdelivr.net',
+          'https://www.google.com/recaptcha/',
+          'https://www.gstatic.com/recaptcha/'
+        ],
         styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
         imgSrc: ["'self'", 'data:'],
         fontSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-        connectSrc: ["'self'"],
-        frameSrc: ['https://challenges.cloudflare.com']
+        connectSrc: ["'self'", 'https://www.google.com/recaptcha/'],
+        frameSrc: [
+          'https://www.google.com/recaptcha/',
+          'https://recaptcha.google.com/recaptcha/'
+        ]
       }
     }
   })
@@ -39,7 +48,7 @@ const corsOptions = {
         if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
           return callback(null, true);
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     const error = new Error('Not allowed by CORS');
     error.status = 403;

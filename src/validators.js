@@ -55,7 +55,7 @@ const auditInputSchema = z
       errorMap: () => ({ message: 'Consent must be true' })
     }),
     company_website_2: z.string().trim().optional().default(''),
-    turnstileToken: z.string().trim().optional().default('')
+    recaptchaToken: z.string().trim().optional().default('')
   })
   .strict();
 

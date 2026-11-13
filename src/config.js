@@ -16,7 +16,7 @@ const envSchema = z.object({
     .min(1, 'ALLOWED_ORIGINS is required')
     .transform((val) => val.split(',').map((s) => s.trim()).filter(Boolean)),
   MAX_PAGES: z.preprocess(cleanString, z.coerce.number().int().positive().default(15)),
-  TURNSTILE_SECRET: z.string().optional().default(''),
+  RECAPTCHA_SECRET: z.string().optional().default(''),
   REPORT_BRAND_NAME: z.string().optional().default(''),
   REPORT_BRAND_URL: z.string().optional().default(''),
   REPORT_BRAND_EMAIL: z.string().optional().default(''),

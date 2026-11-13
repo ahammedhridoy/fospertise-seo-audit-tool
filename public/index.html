@@ -132,7 +132,7 @@
             <input type="text" id="company_website_2" name="company_website_2" tabindex="-1" autocomplete="off">
           </div>
 
-          <div id="turnstileBox" class="mt-3"></div>
+          <div id="recaptchaBox" class="mt-3"></div>
           <div id="formError" class="alert alert-danger mt-3 d-none" role="alert" aria-live="polite"></div>
 
           <button type="submit" id="submitBtn" class="btn btn-primary btn-lg w-100 mt-4">Run Audit</button>
@@ -225,7 +225,7 @@
       // ---- Settings -----------------------------------------------------------
       const API_BASE = '';            // '' = same server. For the main website use 'https://api.yoursite.com'
       const apiBaseUrl = API_BASE || (window.location.protocol === 'file:' ? 'http://localhost:3000' : '');
-      const TURNSTILE_SITE_KEY = '';  // leave empty while testing locally
+      const RECAPTCHA_SITE_KEY = '';  // leave empty while testing locally, add Google reCAPTCHA v2 Site Key for live site
       const POLL_MS = 2500;
       const MAX_POLL_MS = 5 * 60 * 1000;
 
@@ -258,17 +258,28 @@
         return res.json().catch(() => ({})).then((data) => ({ res: res, data: data }));
       }
 
-      // ---- Turnstile (optional CAPTCHA) ---------------------------------------
-      let turnstileId = null;
-      if (TURNSTILE_SITE_KEY) {
+      // ---- Google reCAPTCHA v2 ------------------------------------------------
+      let recaptchaWidgetId = null;
+      if (RECAPTCHA_SITE_KEY) {
+        window.onRecaptchaLoad = function () {
+          if (window.grecaptcha && $('recaptchaBox')) {
+            recaptchaWidgetId = window.grecaptcha.render('recaptchaBox', {
+              sitekey: RECAPTCHA_SITE_KEY
+            });
+          }
+        };
         const s = document.createElement('script');
-        s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        s.src = 'https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit';
         s.async = true;
-        s.onload = () => { turnstileId = window.turnstile.render('#turnstileBox', { sitekey: TURNSTILE_SITE_KEY }); };
+        s.defer = true;
         document.head.appendChild(s);
       }
-      function resetTurnstile() {
-        if (TURNSTILE_SITE_KEY && window.turnstile && turnstileId !== null) window.turnstile.reset(turnstileId);
+      function resetRecaptcha() {
+        if (RECAPTCHA_SITE_KEY && window.grecaptcha && recaptchaWidgetId !== null) {
+          try {
+            window.grecaptcha.reset(recaptchaWidgetId);
+          } catch (_) {}
+        }
       }
 
       // ---- Submit -------------------------------------------------------------
@@ -294,10 +305,10 @@
           company_website_2: $('company_website_2').value
         };
 
-        if (TURNSTILE_SITE_KEY) {
-          const token = window.turnstile && turnstileId !== null ? window.turnstile.getResponse(turnstileId) : '';
-          if (!token) { showFormError('Please complete the security check.'); return; }
-          payload.turnstileToken = token;
+        if (RECAPTCHA_SITE_KEY) {
+          const token = window.grecaptcha && recaptchaWidgetId !== null ? window.grecaptcha.getResponse(recaptchaWidgetId) : '';
+          if (!token) { showFormError('Please complete the reCAPTCHA verification.'); return; }
+          payload.recaptchaToken = token;
         }
 
         $('submitBtn').disabled = true;
@@ -316,7 +327,7 @@
           .catch((err) => {
             showFormError(err.userMessage ? err.message : 'Could not reach the server. Please try again.');
             $('submitBtn').disabled = false;
-            resetTurnstile();
+            resetRecaptcha();
           });
       });
 
@@ -348,7 +359,7 @@
         show('formSection', true);
         showFormError(msg);
         $('submitBtn').disabled = false;
-        resetTurnstile();
+        resetRecaptcha();
       }
 
       function poll() {
@@ -502,7 +513,7 @@
         show('resultSection', false);
         show('formSection', true);
         $('submitBtn').disabled = false;
-        resetTurnstile();
+        resetRecaptcha();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
     })();

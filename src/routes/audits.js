@@ -5,7 +5,7 @@ const Audit = require('../models/Audit');
 const Lead = require('../models/Lead');
 const { auditInputSchema } = require('../validators');
 const { normalizeUrl, assertPublicHost } = require('../services/urlGuard');
-const { verifyTurnstile } = require('../services/turnstile');
+const { verifyRecaptcha } = require('../services/recaptcha');
 const { queueAudit } = require('../jobs/runAudit');
 const { generatePdf, getCompanySlug } = require('../services/report');
 const { sendAuditReportEmail } = require('../services/email');
@@ -64,12 +64,19 @@ router.post('/audits', postAuditLimiter, async (req, res, next) => {
       });
     }
 
-    const { companyName, productsServices, industry, location, email, consent, turnstileToken } =
-      parsed.data;
+    const {
+      companyName,
+      productsServices,
+      industry,
+      location,
+      email,
+      consent,
+      recaptchaToken
+    } = parsed.data;
 
-    // 3. Cloudflare Turnstile verification (if configured)
-    const turnstileOk = await verifyTurnstile(turnstileToken, req.ip);
-    if (!turnstileOk) {
+    // 3. Google reCAPTCHA v2 verification (if configured)
+    const recaptchaOk = await verifyRecaptcha(recaptchaToken, req.ip);
+    if (!recaptchaOk) {
       return res.status(400).json({
         error: 'Please complete the security check and try again.',
         code: 'SECURITY_CHECK_FAILED'

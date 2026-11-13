@@ -1,15 +1,18 @@
 const config = require('../config');
 
 /**
- * Verify Cloudflare Turnstile token.
- * If TURNSTILE_SECRET is not configured, skips verification (for local development/testing).
+ * Verify Google reCAPTCHA v2 token with Google's siteverify API.
+ * If RECAPTCHA_SECRET is not configured, skips verification (for local development/testing).
  *
  * @param {string} token
  * @param {string} [remoteip]
+ * @param {string} [secretOverride] - For testing or custom override
  * @returns {Promise<boolean>}
  */
-async function verifyTurnstile(token, remoteip) {
-  if (!config.TURNSTILE_SECRET) {
+async function verifyRecaptcha(token, remoteip, secretOverride) {
+  const secret = secretOverride !== undefined ? secretOverride : config.RECAPTCHA_SECRET;
+
+  if (!secret) {
     return true;
   }
 
@@ -19,13 +22,13 @@ async function verifyTurnstile(token, remoteip) {
 
   try {
     const formData = new URLSearchParams();
-    formData.append('secret', config.TURNSTILE_SECRET);
+    formData.append('secret', secret);
     formData.append('response', token);
     if (remoteip) {
       formData.append('remoteip', remoteip);
     }
 
-    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
       method: 'POST',
       body: formData
     });
@@ -38,5 +41,5 @@ async function verifyTurnstile(token, remoteip) {
 }
 
 module.exports = {
-  verifyTurnstile
+  verifyRecaptcha
 };

@@ -22,7 +22,7 @@ test('auditInputSchema: accepts valid form input', () => {
   assert.strictEqual(parsed.email, 'contact@example.com');
   assert.strictEqual(parsed.consent, true);
   assert.strictEqual(parsed.company_website_2, '');
-  assert.strictEqual(parsed.turnstileToken, '');
+  assert.strictEqual(parsed.recaptchaToken, '');
 });
 
 test('auditInputSchema: preserves existing https or http scheme', () => {
