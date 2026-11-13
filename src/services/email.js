@@ -265,9 +265,166 @@ async function sendAuditReportEmail(audit, lead, pdfBuffer = null) {
   }
 }
 
+/**
+ * Generate a responsive, modern HTML email for the weekly customer export.
+ */
+function buildWeeklyExportEmailHtml({ filename, totalCount, newThisWeek, avgScore, dateStr }) {
+  const brandName = config.REPORT_BRAND_NAME || 'Fospertise';
+  const brandUrl = config.REPORT_BRAND_URL || 'https://fospertise.com';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Customer Database Export</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f1f5f9; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 26px 32px; background: #1e3a8a; color: #ffffff; text-align: left;">
+              <div style="font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #93c5fd; margin-bottom: 4px;">
+                ${escapeHtml(brandName)} • ADMIN BACKUP &amp; ANALYTICS
+              </div>
+              <h1 style="margin: 0; font-size: 21px; font-weight: 700; color: #ffffff;">
+                📊 Weekly Customer Database Export
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Summary Intro -->
+          <tr>
+            <td style="padding: 24px 32px 12px 32px; color: #334155;">
+              <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.6;">
+                Hello Administrator,
+              </p>
+              <p style="margin: 0; font-size: 14px; line-height: 1.6;">
+                Here is your scheduled Friday export of the complete customer database. The attached Excel spreadsheet contains all registered leads, contact details, and their latest website audit outcomes as of <strong>${escapeHtml(dateStr)}</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Metrics Stat Cards -->
+          <tr>
+            <td style="padding: 12px 32px 20px 32px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td width="32%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 12px; text-align: center;">
+                    <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Total Customers</div>
+                    <div style="font-size: 26px; font-weight: 800; color: #1e3a8a;">${totalCount}</div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Lifetime Leads</div>
+                  </td>
+                  <td width="2%">&nbsp;</td>
+                  <td width="32%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 12px; text-align: center;">
+                    <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">New This Week</div>
+                    <div style="font-size: 26px; font-weight: 800; color: #16a34a;">+${newThisWeek}</div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Last 7 Days</div>
+                  </td>
+                  <td width="2%">&nbsp;</td>
+                  <td width="32%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 12px; text-align: center;">
+                    <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Average Score</div>
+                    <div style="font-size: 26px; font-weight: 800; color: #0284c7;">${avgScore !== null ? avgScore : 'N/A'}</div>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Out of 100</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Attachment Box -->
+          <tr>
+            <td style="padding: 0 32px 24px 32px;">
+              <div style="background-color: #eff6ff; border: 1px dashed #93c5fd; border-radius: 8px; padding: 18px; text-align: center;">
+                <div style="font-weight: 700; color: #1e40af; font-size: 14px; margin-bottom: 4px;">
+                  📑 Excel Database File Attached
+                </div>
+                <div style="font-size: 13px; color: #1d4ed8; font-weight: 600;">
+                  ${escapeHtml(filename)}
+                </div>
+                <div style="font-size: 12px; color: #3b82f6; margin-top: 6px; line-height: 1.5;">
+                  Contains comprehensive customer details including company info, direct email, services, location, submission timestamp, and audit readiness grade.
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 18px 32px; background-color: #0f172a; color: #94a3b8; font-size: 12px; text-align: center;">
+              <div>Automated Weekly Export generated by <a href="${escapeHtml(brandUrl)}" style="color: #60a5fa; text-decoration: none;">${escapeHtml(brandName)}</a></div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Send the weekly customer database Excel export to the administrator.
+ *
+ * @param {object} params
+ * @param {Buffer} params.buffer The .xlsx file buffer
+ * @param {string} params.filename Name of the file (e.g. fospertise-customer-leads-2026-11-13.xlsx)
+ * @param {number} params.totalCount Total customer count
+ * @param {number} params.newThisWeek Number of new customers in past 7 days
+ * @param {number|null} params.avgScore Average score
+ * @returns {Promise<{success: boolean, messageId?: string, error?: string, recipient?: string}>}
+ */
+async function sendWeeklyLeadsExportEmail({ buffer, filename, totalCount, newThisWeek, avgScore }) {
+  const recipient = config.ADMIN_REPORT_EMAIL || config.SMTP_USER;
+  if (!recipient) {
+    return { success: false, error: 'No admin report recipient configured.' };
+  }
+
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.log('[EmailService] SMTP credentials not configured; skipping weekly leads export email.');
+    return { success: false, error: 'SMTP credentials not configured.' };
+  }
+
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  try {
+    const mailOptions = {
+      from: config.EMAIL_FROM || `Fospertise <${config.SMTP_USER}>`,
+      to: recipient,
+      subject: `📊 Weekly Customer Database Export – ${totalCount} Leads (${dateStr})`,
+      html: buildWeeklyExportEmailHtml({ filename, totalCount, newThisWeek, avgScore, dateStr }),
+      text: `Hello Administrator,\n\nHere is your scheduled weekly customer database export.\nTotal Customers: ${totalCount}\nNew Leads This Week: ${newThisWeek}\nAverage AI Readiness Score: ${avgScore !== null ? avgScore : 'N/A'}\n\nPlease find the attached Excel spreadsheet (${filename}).\n\nFospertise AI Readiness Checker\n${config.REPORT_BRAND_URL || 'https://fospertise.com'}`,
+      attachments: [
+        {
+          filename,
+          content: buffer,
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      ]
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[EmailService] Weekly customer database export email sent to ${recipient} (MessageID: ${info.messageId})`);
+
+    return { success: true, messageId: info.messageId, recipient };
+  } catch (err) {
+    console.error(`[EmailService] Failed to send weekly customer export email:`, err.message);
+    return { success: false, error: err.message };
+  }
+}
+
 module.exports = {
   getTransporter,
   sendAuditReportEmail,
-  buildEmailHtml
+  sendWeeklyLeadsExportEmail,
+  buildEmailHtml,
+  buildWeeklyExportEmailHtml
 };
+
 

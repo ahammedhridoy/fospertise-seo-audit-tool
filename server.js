@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const config = require('./src/config');
 const { connectDB } = require('./src/db');
+const { initScheduler } = require('./src/jobs/scheduler');
 const auditRoutes = require('./src/routes/audits');
 
 const app = express();
@@ -79,6 +80,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await connectDB();
+    initScheduler();
     const server = app.listen(config.PORT, '0.0.0.0', () => {
       console.log(`Server listening on port ${config.PORT} (http://localhost:${config.PORT} or http://127.0.0.1:${config.PORT})`);
     });
