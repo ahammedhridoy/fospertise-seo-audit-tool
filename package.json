@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "NODE_ENV=test node --env-file=.env --test test/*.test.js",
-    "test:all": "node --test",
-    "e2e": "node --env-file=.env scripts/e2e.js",
-    "export:email": "node --env-file=.env scripts/export-leads.js"
+    "test": "NODE_ENV=test node -r dotenv/config --test test/*.test.js",
+    "test:all": "NODE_ENV=test node -r dotenv/config --test",
+    "e2e": "node -r dotenv/config scripts/e2e.js",
+    "export:email": "node -r dotenv/config scripts/export-leads.js"
   },
   "dependencies": {
     "@google/genai": "^3.0.0",
