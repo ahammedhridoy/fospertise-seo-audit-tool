@@ -1,4 +1,3 @@
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -11,30 +10,7 @@ const app = express();
 
 app.set('trust proxy', 1);
 
-app.use(
-  helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          'https://cdn.jsdelivr.net',
-          'https://www.google.com/recaptcha/',
-          'https://www.gstatic.com/recaptcha/'
-        ],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
-        imgSrc: ["'self'", 'data:'],
-        fontSrc: ["'self'", 'https://cdn.jsdelivr.net'],
-        connectSrc: ["'self'", 'https://www.google.com/recaptcha/'],
-        frameSrc: [
-          'https://www.google.com/recaptcha/',
-          'https://recaptcha.google.com/recaptcha/'
-        ]
-      }
-    }
-  })
-);
+app.use(helmet());
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -59,7 +35,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50kb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => {
+  res.json({
+    service: 'ai-readiness-checker-api',
+    status: 'online',
+    health: '/api/health'
+  });
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });

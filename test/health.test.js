@@ -16,6 +16,21 @@ test('GET /api/health returns { ok: true }', async (t) => {
   assert.deepStrictEqual(data, { ok: true });
 });
 
+test('GET / returns API status JSON', async (t) => {
+  const server = app.listen(0);
+  t.after(() => server.close());
+
+  const address = server.address();
+  const url = `http://127.0.0.1:${address.port}/`;
+
+  const res = await fetch(url);
+  assert.strictEqual(res.status, 200);
+
+  const data = await res.json();
+  assert.strictEqual(data.status, 'online');
+  assert.strictEqual(data.service, 'ai-readiness-checker-api');
+});
+
 test('GET /unknown-route returns 404 with structured error', async (t) => {
   const server = app.listen(0);
   t.after(() => server.close());
