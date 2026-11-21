@@ -81,10 +81,10 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/fospertise-audit:latest
 
   # =========================================================================
-  # 3. DEPLOY: SSH into Ubuntu VPS and pull & restart container
+  # 3. DEPLOY: SSH into Oracle Linux 9 VPS and pull & restart container
   # =========================================================================
   deploy:
-    name: Deploy to Ubuntu VPS
+    name: Deploy to VPS (Oracle Linux 9)
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -94,15 +94,15 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
+          username: ${{ secrets.VPS_USERNAME || 'opc' }}
           key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script_stop: true
           script: |
-            echo "🚀 Starting Automated Deployment on VPS..."
+            echo "🚀 Starting Automated Deployment on Oracle Linux 9 VPS..."
             
-            APP_DIR="${{ secrets.VPS_APP_DIR || '~/fospertise-seo-audit-tool' }}"
+            APP_DIR="${{ secrets.VPS_APP_DIR || '/home/opc/fospertise-seo-audit-tool' }}"
             eval APP_DIR=$APP_DIR
             cd "$APP_DIR" || { echo "Directory $APP_DIR not found!"; exit 1; }
 
