@@ -1,2 +1,13 @@
-# Placeholder Dockerfile (logic to be implemented in deployment step)
+FROM node:24-alpine
 
+WORKDIR /backend
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+EXPOSE 5000
+
+CMD [ "npm", "start" ]

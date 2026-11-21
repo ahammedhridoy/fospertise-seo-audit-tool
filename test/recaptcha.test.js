@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const { verifyRecaptcha } = require('../src/services/recaptcha');
 
 test('verifyRecaptcha: returns true when RECAPTCHA_SECRET is empty (dev mode)', async () => {
-  const result = await verifyRecaptcha('');
+  const result = await verifyRecaptcha('', '1.2.3.4', '');
   assert.strictEqual(result, true);
 });
 

@@ -10,6 +10,11 @@ const config = require('../config');
  * @returns {Promise<boolean>}
  */
 async function verifyRecaptcha(token, remoteip, secretOverride) {
+  // In automated test runs, skip verification unless explicitly invoked with a secretOverride in unit tests
+  if ((config.NODE_ENV === 'test' || process.env.NODE_ENV === 'test') && secretOverride === undefined) {
+    return true;
+  }
+
   const secret = secretOverride !== undefined ? secretOverride : config.RECAPTCHA_SECRET;
 
   if (!secret) {

@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const ExcelJS = require('exceljs');
-const { exportLeadsToExcelBuffer, formatDate } = require('../src/services/leadExporter');
+const { exportLeadsToExcelBuffer, formatDate, sanitizeExcelCell } = require('../src/services/leadExporter');
 const { buildWeeklyExportEmailHtml } = require('../src/services/email');
 
 test('formatDate formats valid dates and handles invalid inputs gracefully', () => {
@@ -109,4 +109,14 @@ test('buildWeeklyExportEmailHtml renders statistics, filename, and brand info', 
   assert(html.includes('79'), 'Should contain avg score');
   assert(html.includes('fospertise-customer-leads-2026-11-13.xlsx'), 'Should contain filename');
   assert(html.includes('Weekly Customer Database Export'), 'Should contain heading');
+});
+
+test('sanitizeExcelCell neutralizes formula injection triggers', () => {
+  assert.strictEqual(sanitizeExcelCell('=SUM(A1:A10)'), "'=SUM(A1:A10)");
+  assert.strictEqual(sanitizeExcelCell('+cmd|/c calc'), "'+cmd|/c calc");
+  assert.strictEqual(sanitizeExcelCell('-123'), "'-123");
+  assert.strictEqual(sanitizeExcelCell('@SUM'), "'@SUM");
+  assert.strictEqual(sanitizeExcelCell('Acme Corp'), 'Acme Corp');
+  assert.strictEqual(sanitizeExcelCell(123), 123);
+  assert.strictEqual(sanitizeExcelCell(''), '');
 });

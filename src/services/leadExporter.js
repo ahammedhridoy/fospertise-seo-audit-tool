@@ -2,6 +2,17 @@ const ExcelJS = require('exceljs');
 const Lead = require('../models/Lead');
 
 /**
+ * Sanitize text to prevent CSV/Excel Formula Injection (CWE-1236).
+ * Prepends a single quote if string starts with formula operators (=, +, -, @).
+ */
+function sanitizeExcelCell(val) {
+  if (typeof val === 'string' && /^[=+@\-]/.test(val)) {
+    return `'${val}`;
+  }
+  return val;
+}
+
+/**
  * Format a Date object or ISO string to 'YYYY-MM-DD HH:mm:ss' in UTC/local.
  */
 function formatDate(date) {
@@ -120,12 +131,12 @@ async function exportLeadsToExcelBuffer(inMemoryLeads = null) {
 
     const row = sheet.addRow({
       createdAt: formatDate(lead.createdAt),
-      companyName: lead.companyName || '',
+      companyName: sanitizeExcelCell(lead.companyName || ''),
       website: lead.website || '',
       email: lead.email || '',
-      industry: lead.industry || '',
-      location: lead.location || '',
-      productsServices: lead.productsServices || '',
+      industry: sanitizeExcelCell(lead.industry || ''),
+      location: sanitizeExcelCell(lead.location || ''),
+      productsServices: sanitizeExcelCell(lead.productsServices || ''),
       auditStatus: audit.status || 'queued',
       overallScore: scoreVal,
       grade: gradeVal,
@@ -192,5 +203,6 @@ async function exportLeadsToExcelBuffer(inMemoryLeads = null) {
 
 module.exports = {
   exportLeadsToExcelBuffer,
-  formatDate
+  formatDate,
+  sanitizeExcelCell
 };

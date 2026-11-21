@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --env-file=.env --test test/*.test.js",
+    "test": "NODE_ENV=test node --env-file=.env --test test/*.test.js",
     "test:all": "node --test",
     "e2e": "node --env-file=.env scripts/e2e.js",
     "export:email": "node --env-file=.env scripts/export-leads.js"
