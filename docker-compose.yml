@@ -1,0 +1,12 @@
+services:
+  audit-app:
+    image: ${DOCKER_IMAGE:-fospertise-audit:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fospertise-audit
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
